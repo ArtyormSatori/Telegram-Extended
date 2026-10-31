@@ -1,0 +1,60 @@
+# Technical Design — Telegram Extended Media Platform
+
+**Version:** 0.1.0 · Foundation design
+
+## Principles
+Local-first; remote processing by explicit consent; shared domain contracts with native platform adapters; AI proposes but deterministic policy authorizes; immutable inputs and atomic outputs; safe remux before transcode; isolate Telegram upstream changes.
+
+## Logical architecture
+```text
+Telegram UI (Desktop / Android / iOS)
+              |
+       Platform Adapter
+              |
+        Shared Media API
+              |
+    Job Manager / Policy Engine
+       |       |        |
+     Probe   Planner  Validator
+       |       |        |
+    FFprobe  AI Gateway  Capability Registry
+       |
+   Media Backend Adapters (FFmpeg / image / subtitle)
+       |
+   Restricted Worker + Atomic Output
+```
+
+## Shared Media Core
+The initial core is dependency-light C++20. It owns domain types, conversion requests, plans and deterministic validation. It must not depend on Qt, Telegram internals, Python, network services or UI frameworks. Public concepts: MediaInfo, ConversionRequest, ConversionPlan, PlanResult, create_plan and validate_plan. A future C ABI/FFI must define ownership, errors, cancellation and versioning before being frozen.
+
+## Media pipeline
+1. Validate local path and file size.
+2. Identify by signature, not extension.
+3. Probe through restricted FFprobe adapter.
+4. Resolve intent and device capabilities.
+5. Build candidate remux/transcode plans.
+6. Validate against capabilities and user constraints.
+7. Optionally encode a sample for quality/size estimates.
+8. Execute with bounded time, memory, CPU and output size.
+9. Validate streams, decoding, duration, sync and integrity.
+10. Publish atomically; retain source unchanged.
+
+FFmpeg must not expose unnecessary network protocols. First implementation accepts local files only. Never pass user text directly to a shell; use process APIs with argument arrays.
+
+## AI optimizer
+Intent parser, media analyzer, capability resolver, candidate planner, scoring engine and explanation renderer. AI output is untrusted: validate schema and deterministic policy. If model unavailable, fall back to deterministic presets. Score compatibility, quality, size, speed, power, track preservation and user constraints. No silent destructive trade-offs.
+
+## Job lifecycle
+Created → Probing → Planned → AwaitingApproval (when required) → Queued → Running → Validating → Succeeded. Terminal states: Failed and Cancelled. Persist transitions; redact sensitive paths. Use per-job temporary directories and atomic rename where supported; clean partial files after failure/cancellation.
+
+## Platform strategy
+Windows: C++ core and desktop integration; evaluate Media Foundation, NVENC and QSV. Linux: VAAPI, NVENC and QSV. macOS: VideoToolbox/AVFoundation. Android: Kotlin, MediaCodec and JNI where appropriate. iOS: Swift/UIKit and AVFoundation/VideoToolbox; respect background and App Store constraints. Telegram Desktop, Android and iOS are separate upstream codebases.
+
+## CI/CD
+Build and test on Windows, Ubuntu and macOS. Add sanitizer builds, synthetic media integration tests, dependency/license inventory, SBOM, signed builds, provenance and platform QA before release.
+
+## Security and privacy
+Treat media as untrusted. Least privilege, bounded memory/time/size/concurrency, safe temp paths, no network by default, redacted logs and explicit remote consent. Validate output before publication.
+
+## Risks
+Codec patents and redistribution obligations vary; FFmpeg LGPL/GPL configuration changes obligations; hardware encoders depend on drivers; iOS background work is constrained; Telegram upstream changes require ongoing integration testing.
