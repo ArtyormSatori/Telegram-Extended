@@ -41,7 +41,9 @@ ProbeResult FFprobeAdapter::probe(const std::string& local_path,const IProcessRu
  ProbeResult result;
  if(local_path.empty()){result.errors.emplace_back("A local media path is required.");return result;}
  const auto process=runner.run(build_arguments(local_path),timeout);
+ if(!process.launch_error.empty()){result.errors.emplace_back(process.launch_error);return result;}
  if(process.timed_out){result.errors.emplace_back("FFprobe timed out.");return result;}
+ if(process.output_limit_exceeded){result.errors.emplace_back("FFprobe output exceeded the configured limit.");return result;}
  if(process.exit_code!=0){result.errors.emplace_back(process.standard_error.empty()?"FFprobe failed.":process.standard_error);return result;}
  return parse_flat_output(process.standard_output);
 }
