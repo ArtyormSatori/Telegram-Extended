@@ -1,4 +1,5 @@
 #include "telegram_media/ffmpeg_conversion_executor.hpp"
+#include "telegram_media/planner.hpp"
 
 #include <algorithm>
 #include <atomic>
@@ -10,7 +11,6 @@
 namespace telegram_media {
 namespace {
 std::atomic_uint64_t temp_sequence{0};
-
 std::size_t count_kind(const MediaInfo& info, MediaKind kind) {
     return static_cast<std::size_t>(std::count_if(info.streams.begin(), info.streams.end(),
         [kind](const StreamInfo& stream) { return stream.kind == kind; }));
@@ -30,6 +30,11 @@ bool format_matches(const std::string& reported, const std::string& requested) {
         start = end + 1U;
     }
     return false;
+}
+std::chrono::milliseconds remaining_time(std::chrono::steady_clock::time_point deadline) {
+    const auto remaining = std::chrono::duration_cast<std::chrono::milliseconds>(
+        deadline - std::chrono::steady_clock::now());
+    return std::max(remaining, std::chrono::milliseconds::zero());
 }
 std::filesystem::path make_temp_path(const std::filesystem::path& output) {
     const auto parent = output.parent_path().empty()
@@ -68,20 +73,75 @@ ConversionExecutionResult FFmpegConversionExecutor::execute(
         result.errors.emplace_back("Conversion timeout must be positive.");
         return result;
     }
-    const std::filesystem::path final_path(request.output_path);
+    if (request.output_path.empty() || request.output_path.find("://") != std::string::npos) {
+        result.errors.emplace_back("A local output path is required.");
+        return result;
+    }
+    const auto deadline = std::chrono::steady_clock::now() + request.timeout;
+    std::error_code path_error;
+    const auto source_path = std::filesystem::weakly_canonical(request.source_path, path_error);
+    if (path_error || !std::filesystem::is_regular_file(source_path, path_error) || path_error) {
+        result.errors.emplace_back("Source path must refer to an existing regular local file.");
+        return result;
+    }
+    path_error.clear();
+    const auto raw_destination_status = std::filesystem::symlink_status(request.output_path, path_error);
+    if (path_error == std::errc::no_such_file_or_directory) path_error.clear();
+    if (path_error) {
+        result.errors.emplace_back("Could not inspect destination path: " + path_error.message());
+        return result;
+    }
+    if (raw_destination_status.type() != std::filesystem::file_type::not_found) {
+        result.errors.emplace_back("Destination already exists or is a symbolic link; refusing to overwrite it.");
+        return result;
+    }
+    path_error.clear();
+    const auto final_path = std::filesystem::weakly_canonical(request.output_path, path_error);
+    if (path_error) {
+        result.errors.emplace_back("Could not normalize destination path: " + path_error.message());
+        return result;
+    }
+    if (source_path == final_path) {
+        result.errors.emplace_back("Source and destination paths must be different.");
+        return result;
+    }
+
+    const auto probe_timeout = std::min(remaining_time(deadline),
+        std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::seconds(30)));
+    if (probe_timeout <= std::chrono::milliseconds::zero()) {
+        result.errors.emplace_back("Conversion deadline expired before source inspection.");
+        return result;
+    }
+    const auto source_probe = ffprobe_.probe(source_path.string(), runner, probe_timeout);
+    if (!source_probe.ok) {
+        result.errors.emplace_back("Source inspection failed: " +
+            (source_probe.errors.empty() ? std::string("unknown FFprobe error") : source_probe.errors.front()));
+        return result;
+    }
+    const auto plan_errors = validate_plan(source_probe.media, request.request, request.plan);
+    if (!plan_errors.empty()) {
+        result.errors = plan_errors;
+        return result;
+    }
+
     const auto temporary_path = make_temp_path(final_path);
     if (temporary_path.empty()) {
         result.errors.emplace_back("Could not allocate a unique temporary output path.");
         return result;
     }
-    const auto command = FFmpegCommandBuilder::build(ffmpeg_executable_, request.source_path,
-        temporary_path.string(), request.source_info, request.request, request.plan, capabilities);
+    const auto command = FFmpegCommandBuilder::build(ffmpeg_executable_, source_path.string(),
+        temporary_path.string(), source_probe.media, request.request, request.plan, capabilities);
     if (!command.ok) {
         result.errors = command.errors;
         return result;
     }
 
-    result.process = runner.run(command.arguments, request.timeout);
+    const auto ffmpeg_timeout = remaining_time(deadline);
+    if (ffmpeg_timeout <= std::chrono::milliseconds::zero()) {
+        result.errors.emplace_back("Conversion deadline expired before FFmpeg execution.");
+        return result;
+    }
+    result.process = runner.run(command.arguments, ffmpeg_timeout);
     if (!result.process.launch_error.empty()) result.errors.emplace_back(result.process.launch_error);
     else if (result.process.timed_out) result.errors.emplace_back("FFmpeg conversion timed out.");
     else if (result.process.output_limit_exceeded) result.errors.emplace_back("FFmpeg process output exceeded the configured limit.");
@@ -100,8 +160,14 @@ ConversionExecutionResult FFmpegConversionExecutor::execute(
         return result;
     }
 
-    result.output_info = ffprobe_.probe(temporary_path.string(), runner,
-        std::min(request.timeout, std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::seconds(30))));
+    const auto output_probe_timeout = std::min(remaining_time(deadline),
+        std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::seconds(30)));
+    if (output_probe_timeout <= std::chrono::milliseconds::zero()) {
+        result.errors.emplace_back("Conversion deadline expired before output validation.");
+        remove_if_present(temporary_path, result.warnings);
+        return result;
+    }
+    result.output_info = ffprobe_.probe(temporary_path.string(), runner, output_probe_timeout);
     if (!result.output_info.ok) {
         result.errors.emplace_back("Output validation failed: " +
             (result.output_info.errors.empty() ? std::string("unknown FFprobe error")
@@ -110,21 +176,21 @@ ConversionExecutionResult FFmpegConversionExecutor::execute(
         const auto& actual = result.output_info.media;
         if (!format_matches(actual.container, request.plan.target_container))
             result.errors.emplace_back("Output container does not match the requested target.");
-        if (count_kind(actual, MediaKind::Video) != count_kind(request.source_info, MediaKind::Video))
+        if (count_kind(actual, MediaKind::Video) != count_kind(source_probe.media, MediaKind::Video))
             result.errors.emplace_back("Output video stream count changed unexpectedly.");
-        const auto source_audio = count_kind(request.source_info, MediaKind::Audio);
+        const auto source_audio = count_kind(source_probe.media, MediaKind::Audio);
         const auto expected_audio = request.request.preserve_all_audio_tracks
             ? source_audio : std::min<std::size_t>(source_audio, 1U);
         if (count_kind(actual, MediaKind::Audio) != expected_audio)
             result.errors.emplace_back("Output audio stream count does not match the preservation policy.");
         const auto expected_subtitles = request.request.preserve_subtitles
-            ? count_kind(request.source_info, MediaKind::Subtitle) : 0U;
+            ? count_kind(source_probe.media, MediaKind::Subtitle) : 0U;
         if (count_kind(actual, MediaKind::Subtitle) != expected_subtitles)
             result.errors.emplace_back("Output subtitle stream count does not match the preservation policy.");
-        if (request.request.preserve_hdr && has_hdr(request.source_info) && !has_hdr(actual))
+        if (request.request.preserve_hdr && has_hdr(source_probe.media) && !has_hdr(actual))
             result.errors.emplace_back("Output lost HDR signaling that was required to be preserved.");
-        if (request.source_info.duration_ms && actual.duration_ms) {
-            const auto source_duration = *request.source_info.duration_ms;
+        if (source_probe.media.duration_ms && actual.duration_ms) {
+            const auto source_duration = *source_probe.media.duration_ms;
             const auto output_duration = *actual.duration_ms;
             const auto delta = source_duration > output_duration
                 ? source_duration - output_duration : output_duration - source_duration;
