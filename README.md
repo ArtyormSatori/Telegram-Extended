@@ -4,7 +4,7 @@ Cross-platform Telegram client extension focused on professional media playback,
 
 ## Project status
 
-Bootstrap foundation (v0.1.0). This repository is not yet a complete Telegram fork and does not yet include a production FFmpeg execution adapter, AI model integration, or native mobile applications.
+Bootstrap foundation (v0.1.0). This repository is not yet a complete Telegram fork and does not yet include an OS-specific FFprobe process runner, an FFmpeg conversion executor, AI model integration, or native mobile applications.
 
 ## Targets
 
@@ -23,6 +23,13 @@ cmake -S core/media-core -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build --config Release
 ctest --test-dir build --output-on-failure
 ```
+
+## Current media-core status
+
+- Domain types and deterministic conversion planner.
+- FFprobe argv builder and parser for FFprobe flat output.
+- Process execution is injected through `IProcessRunner`; a hardened native runner with timeout and output limits is the next implementation step.
+- Unit tests cover planner policy, FFprobe parsing, HDR metadata, duration/size extraction, and argv path handling.
 
 See [SRS](docs/SRS.md), [Technical Design](docs/TECHNICAL_DESIGN.md), and [ADRs](docs/ADRs.md).
 
