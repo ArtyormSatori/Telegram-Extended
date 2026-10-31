@@ -3,6 +3,7 @@
 #include <map>
 #include <optional>
 #include <string_view>
+#include <utility>
 namespace telegram_media { namespace {
 std::string trim(std::string value) {
  const auto first=value.find_first_not_of(" \t\r\n");
