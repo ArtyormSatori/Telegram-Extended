@@ -31,7 +31,7 @@ ctest --test-dir build --output-on-failure
 - `NativeProcessRunner`: argv-based execution without a shell, process timeout, process-group/job termination, and per-stream output caps (8 MiB by default).
 - `FFmpegCapabilityProbe`: discovers the installed binary's video/audio/subtitle encoders and muxer/demuxer formats at runtime.
 - `FFmpegCommandBuilder`: creates shell-free, policy-checked FFmpeg argv for remux/transcode requests.
-- `FFmpegConversionExecutor`: runs the command to a same-directory temporary output, probes and validates it, then publishes without overwriting an existing destination using an atomic hard link.
+- `FFmpegConversionExecutor`: probes the source, runs the command to a same-directory temporary output, validates the result, then publishes without overwriting an existing destination using an atomic hard link.
 - Injectable `IProcessRunner` for test doubles and platform-specific implementations.
 - Tests for planning, FFprobe parsing, real process launch, timeout, output limits, and optional FFmpeg/FFprobe integration.
 
