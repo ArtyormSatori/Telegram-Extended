@@ -72,3 +72,8 @@ Known validation boundary: the current execution environment is Linux. The Windo
 ## Runtime codec and container capability registry (M1.3)
 
 `FFmpegCapabilityProbe` discovers encoders and formats from the configured FFmpeg executable through the bounded process runner. The registry stores video/audio/subtitle encoder names and demuxer/muxer names separately, including comma-separated format aliases. Unknown codecs are never inferred. This registry is advisory: a listed encoder does not guarantee that a specific hardware device, driver, profile, pixel format, or license permits a particular operation. The final execution backend must validate the concrete stream/device combination and probe the produced output.
+
+
+## FFmpeg command construction (M1.4)
+
+`FFmpegCommandBuilder` combines the user request, source metadata, validated conversion plan, and runtime capability registry into an argv vector. It refuses URL-style inputs, source overwrite, output collisions, unsupported muxers/encoders, mismatched plan settings, and HDR transcodes without an HDR-safe pipeline. It requests non-interactive execution, file-only protocols, error-on-decode-failure, stream mapping, and no-overwrite behavior. The builder is not yet an execution/job adapter: progress, temporary outputs, post-encode QA, and atomic publication remain unimplemented.
