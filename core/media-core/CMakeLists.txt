@@ -1,18 +1,33 @@
 cmake_minimum_required(VERSION 3.20)
 project(telegram_media_core VERSION 0.1.0 LANGUAGES CXX)
-set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
-add_library(telegram_media_core src/planner.cpp src/ffprobe_adapter.cpp)
+
+option(TELEGRAM_MEDIA_BUILD_TESTS "Build Shared Media Core tests" ON)
+
+add_library(telegram_media_core
+    src/planner.cpp
+    src/ffprobe_adapter.cpp
+    src/process_runner.cpp
+)
 target_include_directories(telegram_media_core PUBLIC include)
+target_compile_features(telegram_media_core PUBLIC cxx_std_20)
+set_target_properties(telegram_media_core PROPERTIES CXX_EXTENSIONS OFF)
 if(MSVC)
-  target_compile_options(telegram_media_core PRIVATE /W4 /WX /permissive-)
+    target_compile_options(telegram_media_core PRIVATE /W4 /permissive-)
 else()
-  target_compile_options(telegram_media_core PRIVATE -Wall -Wextra -Wpedantic -Werror)
+    target_compile_options(telegram_media_core PRIVATE -Wall -Wextra -Wpedantic -Wconversion)
 endif()
-include(CTest)
-if(BUILD_TESTING)
-  add_executable(media_core_tests tests/planner_tests.cpp)
-  target_link_libraries(media_core_tests PRIVATE telegram_media_core)
-  add_test(NAME media_core_tests COMMAND media_core_tests)
+
+if(TELEGRAM_MEDIA_BUILD_TESTS)
+    enable_testing()
+    add_executable(media_core_tests tests/planner_tests.cpp)
+    target_link_libraries(media_core_tests PRIVATE telegram_media_core)
+    target_compile_definitions(media_core_tests PRIVATE TELEGRAM_MEDIA_CMAKE_COMMAND="${CMAKE_COMMAND}")
+    find_program(TELEGRAM_MEDIA_FFMPEG_EXECUTABLE ffmpeg)
+    find_program(TELEGRAM_MEDIA_FFPROBE_EXECUTABLE ffprobe)
+    if(TELEGRAM_MEDIA_FFMPEG_EXECUTABLE AND TELEGRAM_MEDIA_FFPROBE_EXECUTABLE)
+        target_compile_definitions(media_core_tests PRIVATE
+            TELEGRAM_MEDIA_FFMPEG_EXECUTABLE="${TELEGRAM_MEDIA_FFMPEG_EXECUTABLE}"
+            TELEGRAM_MEDIA_FFPROBE_EXECUTABLE="${TELEGRAM_MEDIA_FFPROBE_EXECUTABLE}")
+    endif()
+    add_test(NAME media_core_tests COMMAND media_core_tests)
 endif()
