@@ -36,7 +36,7 @@ The POSIX and Windows process-runner implementations are present in source. The 
 
 ## Architecture
 
-See [SRS](docs/SRS.md), [Technical Design](docs/TECHNICAL_DESIGN.md), and [ADRs](docs/ADRs.md).
+See [SRS](docs/SRS.md), [Technical Design](docs/TECHNICAL_DESIGN.md), [Process Runner design](docs/PROCESS_RUNNER.md), and [ADRs](docs/ADRs.md).
 
 ## Safety boundaries
 
