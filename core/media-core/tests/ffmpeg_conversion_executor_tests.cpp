@@ -51,7 +51,6 @@ int main() {
             ConversionExecutionRequest job;
             job.source_path = source.string();
             job.output_path = output.string();
-            job.source_info = source_info.media;
             job.request = conversion;
             job.plan = plan.plan;
             job.timeout = std::chrono::seconds(30);
