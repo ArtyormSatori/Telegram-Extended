@@ -77,3 +77,8 @@ Known validation boundary: the current execution environment is Linux. The Windo
 ## FFmpeg command construction (M1.4)
 
 `FFmpegCommandBuilder` combines the user request, source metadata, validated conversion plan, and runtime capability registry into an argv vector. It refuses URL-style inputs, source overwrite, output collisions, unsupported muxers/encoders, mismatched plan settings, and HDR transcodes without an HDR-safe pipeline. It requests non-interactive execution, file-only protocols, error-on-decode-failure, stream mapping, and no-overwrite behavior. The builder is not yet an execution/job adapter: progress, temporary outputs, post-encode QA, and atomic publication remain unimplemented.
+
+
+## FFmpeg conversion execution (M1.5)
+
+`FFmpegConversionExecutor` invokes the command builder through `IProcessRunner`, writes to a unique temporary output in the destination directory, probes the result, validates container/stream counts/duration/HDR policy, and publishes with a same-directory hard link that fails if the destination exists. This is atomic no-overwrite publication; filesystems without hard-link support fail closed. Progress, pause/resume, cancellation, persistent job state, resource quotas, crash recovery, fsync durability, and UI integration are still absent.
