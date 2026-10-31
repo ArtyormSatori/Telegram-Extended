@@ -56,7 +56,8 @@ int main() {
            "capability probe returns discovered hardware encoder names");
 
 #ifdef TELEGRAM_MEDIA_FFMPEG_EXECUTABLE
-    const auto real = FFmpegCapabilityProbe(TELEGRAM_MEDIA_FFMPEG_EXECUTABLE).inspect(runner);
+    NativeProcessRunner native_runner;
+    const auto real = FFmpegCapabilityProbe(TELEGRAM_MEDIA_FFMPEG_EXECUTABLE).inspect(native_runner);
     expect(real.ok, "real FFmpeg capability discovery succeeds when FFmpeg is installed");
     expect(real.capabilities.supports_muxer("mp4"), "real FFmpeg reports MP4 muxer");
 #endif
