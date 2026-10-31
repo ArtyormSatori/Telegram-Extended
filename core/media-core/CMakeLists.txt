@@ -3,6 +3,8 @@ project(telegram_media_core VERSION 0.1.0 LANGUAGES CXX)
 
 option(TELEGRAM_MEDIA_BUILD_TESTS "Build Shared Media Core tests" ON)
 
+find_package(Threads REQUIRED)
+
 add_library(telegram_media_core
     src/planner.cpp
     src/ffprobe_adapter.cpp
@@ -10,6 +12,7 @@ add_library(telegram_media_core
 )
 target_include_directories(telegram_media_core PUBLIC include)
 target_compile_features(telegram_media_core PUBLIC cxx_std_20)
+target_link_libraries(telegram_media_core PRIVATE Threads::Threads)
 set_target_properties(telegram_media_core PROPERTIES CXX_EXTENSIONS OFF)
 if(MSVC)
     target_compile_options(telegram_media_core PRIVATE /W4 /permissive-)
