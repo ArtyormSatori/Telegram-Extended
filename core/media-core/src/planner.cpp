@@ -11,6 +11,16 @@ std::string normalize(std::string value) {
 bool has_kind(const MediaInfo& source, MediaKind kind) {
  return std::any_of(source.streams.begin(), source.streams.end(), [kind](const StreamInfo& s){ return s.kind==kind; });
 }
+bool container_matches(const std::string& reported, const std::string& requested) {
+ std::size_t start=0;
+ while(start<=reported.size()) {
+  const auto end=reported.find(',',start);
+  if(normalize(reported.substr(start,end==std::string::npos?std::string::npos:end-start))==requested) return true;
+  if(end==std::string::npos) break;
+  start=end+1U;
+ }
+ return false;
+}
 } // namespace
 PlanResult create_plan(const MediaInfo& source, const ConversionRequest& request) {
  PlanResult result; const auto target=normalize(request.target_container);
@@ -19,7 +29,7 @@ PlanResult create_plan(const MediaInfo& source, const ConversionRequest& request
  if (source.streams.empty()) { result.errors.emplace_back("Source has no inspected streams; probe it before planning."); return result; }
  ConversionPlan plan; plan.target_container=target; plan.video_codec=request.target_video_codec; plan.audio_codec=request.target_audio_codec;
  const bool codec_change=request.target_video_codec.has_value() || request.target_audio_codec.has_value();
- const bool same_container=normalize(source.container)==target;
+ const bool same_container=container_matches(source.container,target);
  if (same_container && !codec_change) {
   plan.operation=Operation::Remux;
   plan.rationale.emplace_back("Container unchanged and no codec change requested; stream copy may avoid quality loss.");
