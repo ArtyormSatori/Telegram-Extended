@@ -13,7 +13,6 @@ namespace telegram_media {
 struct ConversionExecutionRequest {
     std::string source_path;
     std::string output_path;
-    MediaInfo source_info;
     ConversionRequest request;
     ConversionPlan plan;
     std::chrono::milliseconds timeout{std::chrono::minutes(10)};
