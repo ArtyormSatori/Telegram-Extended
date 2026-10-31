@@ -141,11 +141,11 @@ ProcessResult NativeProcessRunner::run(const std::vector<std::string>& args,
         }
     }
     (void)::WaitForSingleObject(pi.hProcess, INFINITE);
+    if (job) { ::CloseHandle(job); job = nullptr; }
     DWORD code = 1;
     if (::GetExitCodeProcess(pi.hProcess, &code)) result.exit_code = static_cast<int>(code);
     out_thread.join(); err_thread.join();
     result.output_limit_exceeded = result.output_limit_exceeded || out_limit.load() || err_limit.load();
-    if (job) ::CloseHandle(job);
     ::CloseHandle(out_r); ::CloseHandle(err_r); ::CloseHandle(pi.hThread); ::CloseHandle(pi.hProcess);
 #else
     int out_pipe[2]{-1, -1}, err_pipe[2]{-1, -1};
