@@ -67,3 +67,8 @@ Codec patents and redistribution obligations vary; FFmpeg LGPL/GPL configuration
 The runner returns structured launch errors, exit status, timeout state, and output-limit state. FFprobeAdapter propagates launch failures and rejects timed-out, non-zero, or oversized probe output. Tests cover real child process launch, timeout, output caps, invalid argv, and (when FFmpeg and FFprobe are installed) a generated MP4 probed through the actual adapter.
 
 Known validation boundary: the current execution environment is Linux. The Windows and macOS CI matrix is configured, but their results must be confirmed from GitHub Actions before the implementation is declared cross-platform validated. This process runner is an infrastructure primitive; it does not itself implement FFmpeg transcoding, job scheduling, or output publication.
+
+
+## Runtime codec and container capability registry (M1.3)
+
+`FFmpegCapabilityProbe` discovers encoders and formats from the configured FFmpeg executable through the bounded process runner. The registry stores video/audio/subtitle encoder names and demuxer/muxer names separately, including comma-separated format aliases. Unknown codecs are never inferred. This registry is advisory: a listed encoder does not guarantee that a specific hardware device, driver, profile, pixel format, or license permits a particular operation. The final execution backend must validate the concrete stream/device combination and probe the produced output.
