@@ -29,6 +29,7 @@ ctest --test-dir build --output-on-failure
 - Deterministic conversion planner with remux-first behavior and policy validation.
 - FFprobe flat-output parser for container, audio/video/subtitle streams, dimensions, duration, size, and HDR indicators.
 - `NativeProcessRunner`: argv-based execution without a shell, process timeout, process-group/job termination, and per-stream output caps (8 MiB by default).
+- `FFmpegCapabilityProbe`: discovers the installed binary's video/audio/subtitle encoders and muxer/demuxer formats at runtime.
 - Injectable `IProcessRunner` for test doubles and platform-specific implementations.
 - Tests for planning, FFprobe parsing, real process launch, timeout, output limits, and optional FFmpeg/FFprobe integration.
 
