@@ -9,6 +9,7 @@ add_library(telegram_media_core
     src/planner.cpp
     src/ffprobe_adapter.cpp
     src/process_runner.cpp
+    src/capability_registry.cpp
 )
 target_include_directories(telegram_media_core PUBLIC include)
 target_compile_features(telegram_media_core PUBLIC cxx_std_20)
@@ -37,4 +38,13 @@ if(TELEGRAM_MEDIA_BUILD_TESTS)
             TELEGRAM_MEDIA_FFPROBE_EXECUTABLE="${TELEGRAM_MEDIA_FFPROBE_EXECUTABLE}")
     endif()
     add_test(NAME process_runner_tests COMMAND process_runner_tests)
+
+    add_executable(capability_registry_tests tests/capability_registry_tests.cpp)
+    target_link_libraries(capability_registry_tests PRIVATE telegram_media_core)
+    find_program(TELEGRAM_MEDIA_FFMPEG_EXECUTABLE ffmpeg)
+    if(TELEGRAM_MEDIA_FFMPEG_EXECUTABLE)
+        target_compile_definitions(capability_registry_tests PRIVATE
+            TELEGRAM_MEDIA_FFMPEG_EXECUTABLE="${TELEGRAM_MEDIA_FFMPEG_EXECUTABLE}")
+    endif()
+    add_test(NAME capability_registry_tests COMMAND capability_registry_tests)
 endif()
