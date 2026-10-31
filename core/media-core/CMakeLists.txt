@@ -21,13 +21,17 @@ if(TELEGRAM_MEDIA_BUILD_TESTS)
     enable_testing()
     add_executable(media_core_tests tests/planner_tests.cpp)
     target_link_libraries(media_core_tests PRIVATE telegram_media_core)
-    target_compile_definitions(media_core_tests PRIVATE TELEGRAM_MEDIA_CMAKE_COMMAND="${CMAKE_COMMAND}")
+    add_test(NAME media_core_tests COMMAND media_core_tests)
+
+    add_executable(process_runner_tests tests/process_runner_tests.cpp)
+    target_link_libraries(process_runner_tests PRIVATE telegram_media_core)
+    target_compile_definitions(process_runner_tests PRIVATE TELEGRAM_MEDIA_CMAKE_COMMAND="${CMAKE_COMMAND}")
     find_program(TELEGRAM_MEDIA_FFMPEG_EXECUTABLE ffmpeg)
     find_program(TELEGRAM_MEDIA_FFPROBE_EXECUTABLE ffprobe)
     if(TELEGRAM_MEDIA_FFMPEG_EXECUTABLE AND TELEGRAM_MEDIA_FFPROBE_EXECUTABLE)
-        target_compile_definitions(media_core_tests PRIVATE
+        target_compile_definitions(process_runner_tests PRIVATE
             TELEGRAM_MEDIA_FFMPEG_EXECUTABLE="${TELEGRAM_MEDIA_FFMPEG_EXECUTABLE}"
             TELEGRAM_MEDIA_FFPROBE_EXECUTABLE="${TELEGRAM_MEDIA_FFPROBE_EXECUTABLE}")
     endif()
-    add_test(NAME media_core_tests COMMAND media_core_tests)
+    add_test(NAME process_runner_tests COMMAND process_runner_tests)
 endif()
