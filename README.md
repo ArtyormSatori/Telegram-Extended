@@ -30,6 +30,7 @@ ctest --test-dir build --output-on-failure
 - FFprobe flat-output parser for container, audio/video/subtitle streams, dimensions, duration, size, and HDR indicators.
 - `NativeProcessRunner`: argv-based execution without a shell, process timeout, process-group/job termination, and per-stream output caps (8 MiB by default).
 - `FFmpegCapabilityProbe`: discovers the installed binary's video/audio/subtitle encoders and muxer/demuxer formats at runtime.
+- `FFmpegCommandBuilder`: creates shell-free, policy-checked FFmpeg argv for remux/transcode requests; execution and atomic publication are not yet implemented.
 - Injectable `IProcessRunner` for test doubles and platform-specific implementations.
 - Tests for planning, FFprobe parsing, real process launch, timeout, output limits, and optional FFmpeg/FFprobe integration.
 
@@ -37,7 +38,7 @@ The POSIX and Windows process-runner implementations are present in source. The 
 
 ## Architecture
 
-See [SRS](docs/SRS.md), [Technical Design](docs/TECHNICAL_DESIGN.md), [Process Runner design](docs/PROCESS_RUNNER.md), [Capability Registry](docs/CAPABILITY_REGISTRY.md), and [ADRs](docs/ADRs.md).
+See [SRS](docs/SRS.md), [Technical Design](docs/TECHNICAL_DESIGN.md), [Process Runner design](docs/PROCESS_RUNNER.md), [Capability Registry](docs/CAPABILITY_REGISTRY.md), [FFmpeg Command Builder](docs/FFMPEG_COMMAND_BUILDER.md), and [ADRs](docs/ADRs.md).
 
 ## Safety boundaries
 
