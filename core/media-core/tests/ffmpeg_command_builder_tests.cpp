@@ -53,7 +53,8 @@ int main() {
            "network protocols are not enabled for local input");
     expect(std::find(copy.arguments.begin(), copy.arguments.end(), "copy") != copy.arguments.end(),
            "remux uses stream copy");
-    expect(copy.arguments.back() == std::filesystem::absolute(output).string(),
+    expect(std::filesystem::path(copy.arguments.back()).lexically_normal() ==
+               std::filesystem::weakly_canonical(output),
            "output path is normalized and passed as a single argument");
 
     request.target_container = "matroska";
