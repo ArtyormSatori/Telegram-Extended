@@ -1,6 +1,6 @@
 # FFmpeg Conversion Executor — M1.5
 
-`FFmpegConversionExecutor` executes the shell-free argv from `FFmpegCommandBuilder` through the injected `IProcessRunner`. It writes to a uniquely named temporary file in the destination directory, refuses overwrite, enforces the job timeout, probes the completed temporary file, and checks the target container, video/audio/subtitle stream counts, duration tolerance, and required HDR signaling.
+`FFmpegConversionExecutor` executes the shell-free argv from `FFmpegCommandBuilder` through the injected `IProcessRunner`. It probes the source itself (rather than trusting caller-supplied metadata), writes to a uniquely named temporary file in the destination directory, refuses overwrite, enforces one overall deadline across source probing, FFmpeg, and output probing, then checks the target container, video/audio/subtitle stream counts, duration tolerance, and required HDR signaling.
 
 Publication uses a same-directory hard link from the validated temporary file to the final destination. This operation is atomic and fails if the destination already exists; the temporary link is then removed. If the filesystem does not support hard links, publication fails closed instead of falling back to a non-atomic overwrite-prone copy. A cleanup warning is returned if the temporary name cannot be removed after publication.
 
