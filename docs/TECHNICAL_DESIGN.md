@@ -58,3 +58,12 @@ Treat media as untrusted. Least privilege, bounded memory/time/size/concurrency,
 
 ## Risks
 Codec patents and redistribution obligations vary; FFmpeg LGPL/GPL configuration changes obligations; hardware encoders depend on drivers; iOS background work is constrained; Telegram upstream changes require ongoing integration testing.
+
+
+## Native process execution (M1.2)
+
+`NativeProcessRunner` implements `IProcessRunner` using `fork`/`execvp` and non-blocking pipes on POSIX, and `CreateProcessW` with inherited stdout/stderr pipes on Windows. Arguments are passed as an argv vector and never interpreted by a shell. It rejects empty executables, NUL-containing arguments, argument vectors larger than 1 MiB, non-positive timeouts, and zero output budgets. Standard output and standard error are independently bounded (8 MiB by default); exceeding a bound terminates the process. POSIX children are placed in a process group so timeout termination also targets descendants. Windows uses a Job Object with kill-on-close where the host permits job assignment, with direct-process termination as a fallback.
+
+The runner returns structured launch errors, exit status, timeout state, and output-limit state. FFprobeAdapter propagates launch failures and rejects timed-out, non-zero, or oversized probe output. Tests cover real child process launch, timeout, output caps, invalid argv, and (when FFmpeg and FFprobe are installed) a generated MP4 probed through the actual adapter.
+
+Known validation boundary: the current execution environment is Linux. The Windows and macOS CI matrix is configured, but their results must be confirmed from GitHub Actions before the implementation is declared cross-platform validated. This process runner is an infrastructure primitive; it does not itself implement FFmpeg transcoding, job scheduling, or output publication.
