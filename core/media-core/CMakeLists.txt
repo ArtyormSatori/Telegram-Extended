@@ -10,6 +10,7 @@ add_library(telegram_media_core
     src/ffprobe_adapter.cpp
     src/process_runner.cpp
     src/capability_registry.cpp
+    src/ffmpeg_command_builder.cpp
 )
 target_include_directories(telegram_media_core PUBLIC include)
 target_compile_features(telegram_media_core PUBLIC cxx_std_20)
@@ -47,4 +48,8 @@ if(TELEGRAM_MEDIA_BUILD_TESTS)
             TELEGRAM_MEDIA_FFMPEG_EXECUTABLE="${TELEGRAM_MEDIA_FFMPEG_EXECUTABLE}")
     endif()
     add_test(NAME capability_registry_tests COMMAND capability_registry_tests)
+
+    add_executable(ffmpeg_command_builder_tests tests/ffmpeg_command_builder_tests.cpp)
+    target_link_libraries(ffmpeg_command_builder_tests PRIVATE telegram_media_core)
+    add_test(NAME ffmpeg_command_builder_tests COMMAND ffmpeg_command_builder_tests)
 endif()
