@@ -1,7 +1,10 @@
 #include "telegram_media/planner.hpp"
+#include "telegram_media/ffprobe_adapter.hpp"
 #include <cstdlib>
 #include <iostream>
 #include <string>
+#include <chrono>
+#include <vector>
 using namespace telegram_media;
 namespace {
 int failures=0;
